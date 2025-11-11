@@ -1,111 +1,78 @@
 'use client'
-import Heading from './sub/Heading'
-import Image from 'next/image'
-import { reviewsData, starIcons, arrowIcons } from '@/assets'
 import { useState, useRef, useEffect } from 'react'
-import { animate, motion } from 'framer-motion'
+import Hero from '@/components/Hero'
+import About from '@/components/About'
+import Experience from '@/components/Experience'
+import Skills from '@/components/Skills'
+import Projects from '@/components/Projects'
+import Contact from '@/components/Contact'
+import Navbar from '@/components/Navbar'
+import Toggle from '@/components/sub/Toggle'
+import Load from '@/components/sub/Load'
 
-const Reviews = () => {
-  const [index, setIndex] = useState(0)
-  const [direction, setDirection] = useState(false)
-  const prevIndex = useRef(0)
-  const slides = useRef([])
+const sections = [
+  { id: 'home', component: <Hero /> },
+  { id: 'about', component: <About /> },
+  { id: 'experience', component: <Experience /> },
+  { id: 'skills', component: <Skills /> },
+  { id: 'projects', component: <Projects /> },
+  { id: 'contact', component: <Contact /> },
+]
 
-  const rightClickHandler = () => {
-    animate(slides.current[index], { x: 0 }, { delay: 0.3 })
-    animate(slides.current[prevIndex.current], {
-      scale: index === 0 ? 1 : 0.4,
-      rotate: index === 0 ? 0 : index % 2 === 0 ? 10 : -10,
-    })
-  }
-
-  const leftClickHandler = () => {
-    animate(slides.current[index], { scale: 1, rotate: 0 }, { delay: 0.2 })
-    animate(slides.current[prevIndex.current], { x: '100%' })
-  }
+export default function Home() {
+  const [activeId, setActiveId] = useState('home')
+  const compsRef = useRef(null)
+  const observerRef = useRef(null)
 
   useEffect(() => {
-    direction ? leftClickHandler() : rightClickHandler()
-    prevIndex.current = index
-  }, [index])
+    if (!compsRef.current) return
+
+    // Stop previous observer if exists
+    if (observerRef.current) {
+      observerRef.current.disconnect()
+    }
+
+    const elements = compsRef.current.querySelectorAll('[data-section-id]')
+    if (!elements.length) return
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveId(entry.target.dataset.sectionId)
+          }
+        })
+      },
+      { threshold: 0.3 }
+    )
+
+    elements.forEach((el) => observerRef.current.observe(el))
+
+    // Cleanup on unmount
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [])
 
   return (
-    <div id="reviews" className="my-20">
-      <Heading text={'Reviews'} />
-      <div className="flex flex-col items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, x: -200 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
-          className="relative w-[800px] lg:w-[600px] md:w-[95%] sm:w-[280px] h-[500px] lg:h-[450px] md:h-[400px] sm:h-[600px] flex items-center justify-center overflow-hidden"
-        >
-          {reviewsData.map((review, i) => (
-            <motion.div
-              initial={{ x: '100%' }}
-              key={i}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-y-7 lg:gap-y-4 border border-yellow-500 bg-zinc-50 p-14 lg:p-5 rounded-xl dark:bg-zinc-700 transition-colors"
-              ref={(el) => slides.current.push(el)}
+    <>
+      <Load />
+      <Toggle>
+        <Navbar id={activeId} />
+        <div ref={compsRef}>
+          {sections.map((section) => (
+            <div
+              key={section.id} // ensures unique key
+              data-section-id={section.id}
+              className="relative"
             >
-              <Image
-                src={review.image}
-                alt="Reviews Image"
-                width={130}
-                height={130}
-                className="w-[130px] aspect-square rounded-full border border-yellow-500 p-4 object-contain"
-              />
-              <h1 className="text-2xl md:text-xl text-center trackig-wider text-yellow-600">
-                {review.name}
-              </h1>
-              <p className="text-lg md:text-sm text-justify font-extralight tracking-wide text-gray-600 first-letter:pl-2 dark:text-white transition-colors">
-                {review.comment}
-              </p>
-              <div className="flex flex-col items-center justify-center gap-y-2">
-                <span className="text-lg font-light text-yellow-600 mr-3">
-                  {review.stars
-                    .reduce((sum, item) => {
-                      return (sum += item)
-                    }, 0)
-                    .toFixed(1)}
-                </span>
-                <div className="flex items-center gap-x-2 text-2xl text-yellow-500">
-                  {review.stars.map((star, i) => (
-                    <span key={i}>{star === 1 ? starIcons[0] : starIcons[1]}</span>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
+              {section.component}
+            </div>
           ))}
-        </motion.div>
-        <div className="flex gap-x-4 text-4xl text-yellow-500 mt-5">
-          <button
-            className={`${
-              index === 0 ? 'opacity-30 pointer-events-none' : 'opacity-100 pointer-events-auto'
-            } hover:scale-150 transition-all`}
-            onClick={() => {
-              setDirection(true)
-              setIndex(index - 1)
-            }}
-          >
-            {arrowIcons[0]}
-          </button>
-          <button
-            className={`${
-              index === reviewsData.length - 1
-                ? 'opacity-30 pointer-events-none'
-                : 'opacity-100 pointer-events-auto'
-            } hover:scale-150 transition-all`}
-            onClick={() => {
-              setDirection(false)
-              setIndex(index + 1)
-            }}
-          >
-            {arrowIcons[1]}
-          </button>
         </div>
-      </div>
-    </div>
+      </Toggle>
+    </>
   )
 }
-
-export default Reviews
